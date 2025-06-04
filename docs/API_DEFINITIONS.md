@@ -10,39 +10,52 @@ All API endpoints are prefixed with `/api/`.
 
 ## Authentication
 
-*   Endpoints requiring authentication will expect a token (e.g., JWT) in the
-    `Authorization` header.
-*   User registration and login will be the primary way to obtain these tokens.
+Authentication is primarily handled via Google OAuth 2.0.
+Endpoints requiring authentication will expect a JWT in the `Authorization: Bearer <token>` header.
+
+*   **`GET /api/auth/google`**
+    *   Description: Initiates the Google OAuth 2.0 authentication flow. Redirects the user to Google's consent screen.
+    *   Authentication: None.
+    *   Response: Redirect to Google.
+
+*   **`GET /api/auth/google/callback`**
+    *   Description: Handles the callback from Google after successful authentication. Google redirects here with an authorization code. The backend exchanges this code for tokens, finds or creates a user, and issues JWTs (access and refresh tokens).
+    *   Authentication: None (Google provides the code).
+    *   Response: JSON containing `accessToken`, `refreshToken`, and `user` details.
+
+*   **`POST /api/auth/refresh`**
+    *   Description: Obtain a new access token using a valid refresh token.
+    *   Authentication: None (requires a valid refresh token in the request body).
+    *   Request Body: `{ "refreshToken": "your_refresh_token_here" }`
+    *   Response: JSON containing `accessToken` (and potentially a new `refreshToken` if rotation is implemented).
+
+*   **`POST /api/auth/logout`** (Optional)
+    *   Description: Invalidate the provided refresh token.
+    *   Authentication: None (requires a valid refresh token in the request body or an HttpOnly cookie).
+    *   Request Body: `{ "refreshToken": "your_refresh_token_here" }` (if not using cookies)
+    *   Response: Success message or 204 No Content.
 
 ---
 
 ## Users API
 
-Base path: `/users/`
+Base path: `/api/users/`
 
-*   **`POST /users/register/`**
-    *   Description: Register a new user.
-    *   Request Body: Username, email, password.
-    *   Response: User details (excluding password), possibly an auth token.
-*   **`POST /users/login/`**
-    *   Description: Log in an existing user.
-    *   Request Body: Username (or email), password.
-    *   Response: Auth token, user details.
-*   **`GET /users/me/`**
+*   **`GET /api/users/me/`**
     *   Description: Get details of the currently authenticated user.
-    *   Authentication: Required.
-    *   Response: User details (ID, username, email, etc.).
-*   **`PUT /users/me/`**
-    *   Description: Update details of the currently authenticated user.
-    *   Authentication: Required.
-    *   Request Body: Fields to update (e.g., email, password - with confirmation).
+    *   Authentication: Required (Valid JWT access token).
+    *   Response: User details (ID, username, email, google_id, avatar_url, etc.).
+*   **`PUT /api/users/me/`**
+    *   Description: Update details of the currently authenticated user (e.g., username if allowed, or other preferences).
+    *   Authentication: Required (Valid JWT access token).
+    *   Request Body: Fields to update.
     *   Response: Updated user details.
 
 ---
 
 ## Topics API
 
-Base path: `/topics/`
+Base path: `/api/topics/`
 
 *   **`POST /topics/`**
     *   Description: Create a new topic.
@@ -72,25 +85,25 @@ Base path: `/topics/`
 
 ## Comments API
 
-Base path: `/topics/{topic_id}/comments/` (for topic-specific comments)
-Alternative base path: `/comments/` (for direct comment manipulation if needed)
+Base path: `/api/topics/{topic_id}/comments/`
+Alternative base path: `/api/comments/`
 
-*   **`POST /topics/{topic_id}/comments/`**
+*   **`POST /api/topics/{topic_id}/comments/`**
     *   Description: Create a new comment on a specific topic.
     *   Authentication: Required.
     *   Request Body: Comment text/content.
     *   Response: Details of the created comment.
-*   **`GET /topics/{topic_id}/comments/`**
+*   **`GET /api/topics/{topic_id}/comments/`**
     *   Description: List all comments for a specific topic. Supports pagination.
     *   Authentication: Optional (publicly accessible).
     *   Query Parameters: `page`, `page_size`.
     *   Response: Paginated list of comments for the topic.
-*   **`PUT /comments/{comment_id}/`**
+*   **`PUT /api/comments/{comment_id}/`**
     *   Description: Update an existing comment.
     *   Authentication: Required (user must be the owner or an admin).
     *   Request Body: Fields to update (comment text/content).
     *   Response: Updated comment details.
-*   **`DELETE /comments/{comment_id}/`**
+*   **`DELETE /api/comments/{comment_id}/`**
     *   Description: Delete a comment.
     *   Authentication: Required (user must be the owner or an admin).
     *   Response: Success message or 204 No Content.
@@ -99,7 +112,7 @@ Alternative base path: `/comments/` (for direct comment manipulation if needed)
 
 ## Admin API
 
-Base path: `/admin/`
+Base path: `/api/admin/`
 
 These endpoints are for administrative purposes and require admin privileges.
 Many of these functionalities might be covered by Django's built-in admin panel.

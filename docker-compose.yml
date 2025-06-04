@@ -1,66 +1,44 @@
 version: '3.8'
 
 services:
+  # Existing backend service (assuming it's named 'backend' or similar)
+  # Ensure its environment variables can be configured to connect to the db service
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     ports:
-      - "3001:3001" # Host:Container
-    volumes:
-      - ./backend:/usr/src/app # Mount host src folder for development
-      - /usr/src/app/node_modules # Don't mount node_modules from host
-    environment:
-      - NODE_ENV=development # Or production, depending on needs
-      - DATABASE_URL=postgres://myuser:mypassword@db:5432/mydatabase
-      # Add other backend environment variables here (e.g., GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, JWT_SECRET)
-      # Example:
-      # - GOOGLE_CLIENT_ID=your_google_client_id
-      # - GOOGLE_CLIENT_SECRET=your_google_client_secret
-      # - JWT_SECRET=your_jwt_secret
+      - "3001:3001" # Expose backend port
+    env_file:
+      - ./backend/.env # Load backend environment variables
     depends_on:
       - db
-    networks:
-      - app-network
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000" # Host:Container
     volumes:
-      - ./frontend:/usr/src/app # Mount host src folder for development
-      - /usr/src/app/node_modules # Don't mount node_modules from host
-      - /usr/src/app/.next # Don't mount .next from host in development (usually better for HMR)
-    environment:
-      - NODE_ENV=development
-      # The backend URL needs to be accessible from the frontend container.
-      # During client-side rendering, it would be http://localhost:3001 or similar if accessing host directly.
-      # For server-side rendering or API routes in Next.js, it would be http://backend:3001
-      - NEXT_PUBLIC_BACKEND_URL=http://localhost:3001/api # For client-side calls from browser
-      - INTERNAL_BACKEND_URL=http://backend:3001 # For server-side calls from Next.js server
-    depends_on:
-      - backend
-    networks:
-      - app-network
+      - ./backend:/usr/src/app # Mount backend code
+      - /usr/src/app/node_modules # Anonymous volume for node_modules
+    # Add command to run migrations if applicable after db is up
+
+  # Existing frontend service (assuming it's named 'frontend' or similar)
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000" # Expose frontend port
+    env_file:
+      - ./frontend/.env # Load frontend environment variables
+    volumes:
+      - ./frontend:/usr/src/app # Mount frontend code
+      - /usr/src/app/node_modules
+      - /usr/src/app/.next
 
   db:
     image: postgres:15-alpine
+    container_name: verversite_db
+    environment:
+      POSTGRES_USER: ververuser # From backend/.env.example
+      POSTGRES_PASSWORD: ververpassword # From backend/.env.example
+      POSTGRES_DB: verversite # From backend/.env.example
     ports:
-      - "5432:5432" # Host:Container (Careful with exposing DB directly in production)
+      - "5432:5432" # Expose PostgreSQL port to host
     volumes:
       - postgres_data:/var/lib/postgresql/data # Persist data
-    environment:
-      - POSTGRES_USER=myuser
-      - POSTGRES_PASSWORD=mypassword
-      - POSTGRES_DB=mydatabase
-    networks:
-      - app-network
 
 volumes:
-  postgres_data: # Defines the named volume for data persistence
-
-networks:
-  app-network:
-    driver: bridge
+  postgres_data: # Define the named volume for data persistence
