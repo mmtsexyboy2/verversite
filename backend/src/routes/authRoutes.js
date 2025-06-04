@@ -1,21 +1,33 @@
 const express = require('express');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config({ path: '../.env' });
 
 const router = express.Router();
+
+// Rate limiter for authentication routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 requests per windowMs
+  message: 'Too many login attempts from this IP, please try again after 15 minutes',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 // Initiate Google OAuth
 // Scope requests profile information and email
 router.get(
   '/google',
+  authLimiter, // Apply the limiter
   passport.authenticate('google', { scope: ['profile', 'email'], session: false })
 );
 
 // Google OAuth callback
 router.get(
   '/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: '/auth/google/failure' }), // session: false as we are using JWT
+  authLimiter, // Apply the limiter
+  passport.authenticate('google', { session: false, failureRedirect: '/auth/google/failure' }),
   (req, res) => {
     // Successful authentication
     if (!req.user) {
@@ -30,7 +42,7 @@ router.get(
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: '1h', // Token expiration time
+      expiresIn: '7d', // Updated token expiration to 7 days
     });
 
     // For now, return token in JSON response.

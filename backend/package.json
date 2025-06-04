@@ -11,10 +11,14 @@
   "dependencies": {
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "sharp": "^0.34.2"
   },
   "devDependencies": {
     "node-pg-migrate": "^8.0.1",

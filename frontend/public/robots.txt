@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+
+# Disallow API routes if they are ever proxied directly via frontend domain
+# and are not meant for direct crawling (e.g. if /api/* was proxied)
+# For now, specific API calls are made, not a full proxy.
+# Disallow: /api/
+
+Disallow: /admin/ # Placeholder for future admin panel paths
+Disallow: /login # User-specific pages not valuable for crawling once logged in
+Disallow: /profile # User-specific pages
+Disallow: /topics/create # Action page, not content to crawl
+
+# Allow crawling of individual topic pages and specific static/important pages
+Allow: /topics/
+Allow: /$ # Allow homepage
+
+# Sitemap: Replace YOUR_DOMAIN.COM with your actual production domain
+# For local testing, this might point to localhost, but for production, it must be the live domain.
+# Example: Sitemap: http://localhost:3000/sitemap.xml (for local dev, if NEXT_PUBLIC_FRONTEND_URL is http://localhost:3000)
+# Production: Sitemap: https://www.verversite.com/sitemap.xml (replace with actual domain)
+Sitemap: http://localhost:3000/sitemap.xml
+# Note: The URL here should be the publicly accessible URL of your frontend.
+# If process.env.NEXT_PUBLIC_FRONTEND_URL is available during build, it could be used.
+# Otherwise, manually set for production.

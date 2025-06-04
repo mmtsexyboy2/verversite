@@ -1,0 +1,106 @@
+/* Default body styles (can be in globals.css or _app.js) */
+body {
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Theme classes based on category.pageClassName */
+.theme-science {
+  background-color: black;
+  color: white;
+}
+.theme-science h1, .theme-science h2, .theme-science a {
+  color: cyan; /* Accent color */
+}
+.theme-science button {
+  background-color: cyan;
+  color: black;
+  border-color: cyan;
+}
+/* More specific overrides for links if needed */
+.theme-science a:hover {
+  color: white;
+}
+
+
+.theme-love {
+  background-color: pink;
+  color: darkred;
+}
+.theme-love h1, .theme-love h2, .theme-love a {
+  color: red; /* Accent color */
+}
+.theme-love button {
+  background-color: red;
+  color: pink;
+  border-color: red;
+}
+.theme-love a:hover {
+  color: darkred;
+}
+
+
+.theme-business {
+  background-color: lightblue;
+  color: darkblue;
+}
+.theme-business h1, .theme-business h2, .theme-business a {
+  color: blue; /* Accent color */
+}
+.theme-business button {
+  background-color: blue;
+  color: lightblue;
+  border-color: blue;
+}
+.theme-business a:hover {
+  color: darkblue;
+}
+
+
+.theme-general {
+  background-color: lightgray;
+  color: black;
+}
+.theme-general h1, .theme-general h2, .theme-general a {
+  color: gray; /* Accent color */
+}
+.theme-general button {
+  background-color: gray;
+  color: lightgray;
+  border-color: gray;
+}
+.theme-general a:hover {
+  color: black;
+}
+
+/* Ensure a default styling for elements inside themed containers if needed */
+/* e.g., if a theme has dark background, ensure inputs are visible */
+.theme-science input, .theme-science textarea, .theme-science select {
+  background-color: #333;
+  color: white;
+  border: 1px solid cyan;
+}
+.theme-love input, .theme-love textarea, .theme-love select {
+  background-color: #ffe0e0;
+  color: darkred;
+  border: 1px solid red;
+}
+.theme-business input, .theme-business textarea, .theme-business select {
+  background-color: #e0f0ff;
+  color: darkblue;
+  border: 1px solid blue;
+}
+.theme-general input, .theme-general textarea, .theme-general select {
+  background-color: #f0f0f0;
+  color: black;
+  border: 1px solid gray;
+}
+/* Style for buttons inside themed containers to inherit text color for their specific theme */
+.theme-science button { color: black; }
+.theme-love button { color: pink; }
+.theme-business button { color: lightblue; }
+.theme-general button { color: lightgray; }
+
+/* You might need to adjust specific component styles if they override these global theme colors. */
+/* The .navLink style in index.js and [topicId].js might need to be adjusted or made more theme-aware. */
+/* For example, by passing theme colors as props or using CSS variables. */
+/* For now, this provides a basic background/text/accent color change. */

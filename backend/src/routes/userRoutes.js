@@ -21,10 +21,16 @@ router.get('/me', protect, async (req, res) => {
     const profileResult = await pool.query('SELECT bio, avatar_url FROM user_profiles WHERE user_id = $1', [userId]);
     const profile = profileResult.rows[0];
 
+    // Check if user is admin
+    const adminEmailsEnv = process.env.ADMIN_EMAILS || '';
+    const adminEmailList = adminEmailsEnv.split(',').map(email => email.trim().toLowerCase());
+    const isAdminUser = adminEmailList.includes(user.email.toLowerCase());
+
     // Combine user and profile information
     const userProfile = {
       ...user,
-      profile: profile || null, // If no profile, set to null
+      profile: profile || null,
+      isAdmin: isAdminUser, // Add isAdmin flag
     };
 
     res.json(userProfile);
@@ -78,5 +84,89 @@ router.put('/me', protect, async (req, res) => {
     res.status(500).json({ message: 'Server error while updating profile' });
   }
 });
+
+// Follow a user
+router.post('/:userId/follow', protect, async (req, res) => {
+  const followerId = req.user.id; // Current logged-in user
+  const followingId = parseInt(req.params.userId, 10);
+
+  if (followerId === followingId) {
+    return res.status(400).json({ message: 'You cannot follow yourself.' });
+  }
+
+  try {
+    // Check if the user to be followed exists
+    const userToFollow = await pool.query('SELECT id FROM users WHERE id = $1', [followingId]);
+    if (userToFollow.rows.length === 0) {
+      return res.status(404).json({ message: 'User to follow not found.' });
+    }
+
+    await pool.query(
+      'INSERT INTO user_follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [followerId, followingId]
+    );
+    res.status(201).json({ message: 'Successfully followed user.' });
+  } catch (error) {
+    console.error('Error following user:', error);
+    res.status(500).json({ message: 'Server error while trying to follow user.' });
+  }
+});
+
+// Unfollow a user
+router.delete('/:userId/follow', protect, async (req, res) => {
+  const followerId = req.user.id; // Current logged-in user
+  const followingId = parseInt(req.params.userId, 10);
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM user_follows WHERE follower_id = $1 AND following_id = $2',
+      [followerId, followingId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Follow relationship not found or already unfollowed.' });
+    }
+    res.status(200).json({ message: 'Successfully unfollowed user.' });
+  } catch (error) {
+    console.error('Error unfollowing user:', error);
+    res.status(500).json({ message: 'Server error while trying to unfollow user.' });
+  }
+});
+
+// Get a user's followers
+router.get('/:userId/followers', async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.email
+       FROM users u
+       JOIN user_follows uf ON u.id = uf.follower_id
+       WHERE uf.following_id = $1`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching followers:', error);
+    res.status(500).json({ message: 'Server error while fetching followers.' });
+  }
+});
+
+// Get users a user is following
+router.get('/:userId/following', async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.email
+       FROM users u
+       JOIN user_follows uf ON u.id = uf.following_id
+       WHERE uf.follower_id = $1`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching following list:', error);
+    res.status(500).json({ message: 'Server error while fetching following list.' });
+  }
+});
+
 
 module.exports = router;

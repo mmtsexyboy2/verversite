@@ -6,8 +6,8 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/mydatabase
-      JWT_SECRET: yourjwtsecret
+      DATABASE_URL: postgresql://user:password@postgres:5432/verversite_db # Updated DB name
+      JWT_SECRET: yourjwtsecret # This will be overridden by backend/.env if it's correctly loaded by dotenv
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
@@ -29,7 +29,7 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: mydatabase
+      POSTGRES_DB: verversite_db # Updated DB name
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
