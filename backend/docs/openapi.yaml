@@ -1,0 +1,232 @@
+openapi: 3.0.0
+info:
+  title: User Authentication and Profile API
+  version: v1
+  description: API for managing user authentication (Google OAuth) and user profiles.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user.
+          readOnly: true
+        google_id:
+          type: string
+          description: Google unique user ID.
+          readOnly: true
+        email:
+          type: string
+          format: email
+          description: User's email address.
+        full_name:
+          type: string
+          description: User's full name.
+        avatar_url:
+          type: string
+          format: url
+          description: URL of the user's avatar image.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of user creation.
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of last user update.
+          readOnly: true
+
+    UserProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user (links to User table).
+          readOnly: true
+        bio:
+          type: string
+          nullable: true
+          description: A short biography of the user.
+        # Add other profile fields here
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of last profile update.
+          readOnly: true
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: A human-readable error message.
+        code:
+          type: integer
+          format: int32
+          description: An internal error code.
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /auth/google:
+    get:
+      summary: Initiate Google OAuth2 login
+      description: Redirects the user to Google's authentication page.
+      responses:
+        '302':
+          description: Redirect to Google OAuth server.
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/Error'
+
+  /auth/google/callback:
+    get:
+      summary: Google OAuth2 callback
+      description: Handles the callback from Google after authentication. Sets a JWT cookie.
+      responses:
+        '200':
+          description: Authentication successful, JWT token set as an HTTP-only cookie. User redirected to profile or frontend.
+          # Typically, the response might include user info or just a success message,
+          # with the JWT being set in a cookie.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Authentication successful.
+                  user:
+                    \$ref: '#/components/schemas/User'
+        '401':
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      summary: Logout user
+      description: Clears the JWT cookie, effectively logging out the user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful.
+        '401':
+          description: Not authenticated.
+        '500':
+          description: Internal server error.
+
+  /users/me:
+    get:
+      summary: Get current user's profile
+      description: Retrieves the profile information of the currently authenticated user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved user profile.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/User' # Or a combined User + UserProfile schema
+        '401':
+          description: Unauthorized - JWT token is missing or invalid.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/Error'
+        '404':
+          description: User not found.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/Error'
+
+  /users/me/profile:
+    get:
+      summary: Get current user's extended profile
+      description: Retrieves the extended profile information (e.g., bio) of the currently authenticated user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successfully retrieved user's extended profile.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Profile not found.
+        '500':
+          description: Internal server error.
+    put:
+      summary: Update current user's profile
+      description: Allows the authenticated user to update their profile information (e.g., bio, full_name).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                  description: User's full name.
+                  nullable: true
+                bio:
+                  type: string
+                  description: A short biography of the user.
+                  nullable: true
+                # Add other updatable profile fields here
+      responses:
+        '200':
+          description: Profile updated successfully.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/UserProfile' # Or a combined User + UserProfile
+        '400':
+          description: Bad request - Invalid input data.
+          content:
+            application/json:
+              schema:
+                \$ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized.
+        '500':
+          description: Internal server error.
