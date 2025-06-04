@@ -1,0 +1,25 @@
+# Database Schema
+
+## users
+- `id` (SERIAL PRIMARY KEY)
+- `google_id` (TEXT UNIQUE NOT NULL)
+- `email` (TEXT UNIQUE NOT NULL)
+- `name` (TEXT)
+- `created_at` (TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)
+- `updated_at` (TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)
+
+## auth_tokens
+- `id` (SERIAL PRIMARY KEY)
+- `user_id` (INTEGER REFERENCES users(id) ON DELETE CASCADE)
+- `token` (TEXT NOT NULL)
+- `type` (TEXT NOT NULL DEFAULT 'jwt')
+- `expires_at` (TIMESTAMP WITH TIME ZONE)
+- `created_at` (TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)
+
+## user_profiles
+- `id` (SERIAL PRIMARY KEY)
+- `user_id` (INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE)
+- `bio` (TEXT)
+- `avatar_url` (TEXT)
+- `created_at` (TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)
+- `updated_at` (TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)

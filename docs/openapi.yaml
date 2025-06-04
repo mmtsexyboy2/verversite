@@ -1,0 +1,92 @@
+openapi: 3.0.0
+info:
+  title: API Documentation
+  version: 1.0.0
+  description: API documentation for the project
+
+paths:
+  /auth/google:
+    post:
+      summary: Initiate Google OAuth
+      responses:
+        '200':
+          description: Successful initiation
+  /auth/google/callback:
+    get:
+      summary: Handle Google OAuth callback
+      responses:
+        '200':
+          description: Successful callback
+  /api/users/me:
+    get:
+      summary: Get current user's profile
+      responses:
+        '200':
+          description: Successful retrieval
+    put:
+      summary: Update current user's profile
+      responses:
+        '200':
+          description: Successful update
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        google_id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AuthToken:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        token:
+          type: string
+        type:
+          type: string
+          default: jwt
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    Profile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        bio:
+          type: string
+        avatar_url:
+          type: string
+          format: url
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
