@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 import { ThumbUpIcon, TrashIcon } from '@heroicons/react/solid';
-import CommentForm from './CommentForm'; // Import the newly created CommentForm
+import CommentForm from './CommentForm';
 
 const CommentItem = ({ comment, topicId, allComments, onCommentDeleted, onReplySuccess, depth }) => {
     const { user, api, loading: authLoading } = useAuth();
@@ -53,7 +53,7 @@ const CommentItem = ({ comment, topicId, allComments, onCommentDeleted, onReplyS
 
     return (
         <div
-            style={{ marginLeft: `${depth * 16}px` }} // Reduced multiplier from 20px to 16px
+            style={{ marginLeft: `${depth * 16}px` }}
             className={`py-3 border-b border-gray-200 last:border-b-0 ${depth > 0 ? 'border-l-2 border-gray-100 pl-3' : ''}`}
         >
             <div className="flex items-start space-x-3">

@@ -24,7 +24,7 @@ const NewTopicPage = () => {
                 setCategories(response.data || []);
             } catch (err) {
                 console.error('Failed to fetch categories:', err);
-                // setError('Could not load categories.');
+                setError('Could not load categories. Please try refreshing the page.'); // Modified error message slightly
             }
         };
         if (api) fetchCategories();
