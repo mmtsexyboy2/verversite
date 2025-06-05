@@ -20,6 +20,42 @@ router.get('/me', protect, async (req, res) => {
     }
 });
 
+// @desc    Update user profile (current logged in user)
+// @route   PUT /api/users/me
+// @access  Private
+router.put('/me', protect, async (req, res) => {
+    const { full_name } = req.body;
+    const userId = req.user.id;
+
+    // Basic validation
+    if (typeof full_name !== 'string') {
+        return res.status(400).json({ message: 'Full name must be a string.' });
+    }
+    if (full_name.trim().length === 0) {
+        return res.status(400).json({ message: 'Full name cannot be empty.' });
+    }
+    if (full_name.length > 100) { // Max length check
+        return res.status(400).json({ message: 'Full name cannot exceed 100 characters.' });
+    }
+
+    try {
+        const updatedUserRows = await knex('users')
+            .where({ id: userId })
+            .update({ full_name: full_name.trim() })
+            .returning(['id', 'email', 'username', 'full_name', 'avatar_url', 'date_joined', 'last_login', 'is_staff', 'is_superuser']);
+
+        if (updatedUserRows && updatedUserRows.length > 0) {
+            res.json(updatedUserRows[0]);
+        } else {
+            // This case should ideally not happen if protect middleware works and user exists
+            res.status(404).json({ message: 'User not found or update failed.' });
+        }
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        res.status(500).json({ message: 'Error updating user profile' });
+    }
+});
+
 // @desc    Logout user (conceptual - JWT is stateless, client needs to discard token)
 // @route   POST /api/users/logout
 // @access  Private

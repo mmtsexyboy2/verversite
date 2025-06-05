@@ -101,9 +101,11 @@ const UserProfilePage = () => {
                             {/* Follow/Unfollow Button or Edit Profile Button */}
                             <div className="mt-4 md:mt-1 md:ml-4 flex-shrink-0">
                                 {isOwnProfile ? (
-                                    <button className="bg-gray-200 hover:bg-gray-300 text-text_default font-semibold py-2 px-4 rounded-md text-sm transition duration-150">
-                                        Edit Profile (Not Implemented)
-                                    </button>
+                                    <Link href="/profile/edit" legacyBehavior>
+                                        <a className="bg-gray-200 hover:bg-gray-300 text-text_default font-semibold py-2 px-4 rounded-md text-sm transition duration-150">
+                                            Edit Profile
+                                        </a>
+                                    </Link>
                                 ) : currentUser && (
                                     <button
                                         onClick={handleFollowToggle}
