@@ -42,7 +42,8 @@ router.get('/', async (req, res) => {
                 'users.username as author_username',
                 'categories.name as category_name',
                 knex.raw('(SELECT COUNT(*)::integer FROM comments WHERE comments.topic_id = topics.id) as comment_count'),
-                knex.raw('(SELECT COUNT(*)::integer FROM likes WHERE likes.topic_id = topics.id) as like_count')
+                knex.raw('(SELECT COUNT(*)::integer FROM likes WHERE likes.topic_id = topics.id) as like_count'),
+                knex.raw('(COALESCE((SELECT COUNT(*)::integer FROM likes WHERE likes.topic_id = topics.id), 0) + COALESCE((SELECT COUNT(*)::integer FROM comments WHERE comments.topic_id = topics.id), 0)) as popularity_score')
              )
             .leftJoin('users', 'topics.user_id', 'users.id')
             .leftJoin('categories', 'topics.category_id', 'categories.id')

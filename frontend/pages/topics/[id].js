@@ -60,7 +60,7 @@ const CommentForm = ({ topicId, parentCommentId = null, onCommentPosted }) => {
 };
 
 // CommentItem component (can be in its own file later)
-const CommentItem = ({ comment, topicId, onCommentDeleted, onReplySuccess }) => {
+const CommentItem = ({ comment, topicId, allComments, onCommentDeleted, onReplySuccess, depth }) => {
     const { user, api, loading: authLoading } = useAuth();
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [liked, setLiked] = useState(false); // Placeholder for like state
@@ -93,7 +93,7 @@ const CommentItem = ({ comment, topicId, onCommentDeleted, onReplySuccess }) => 
         if (!api || !confirm("Are you sure you want to delete this comment?")) return;
         try {
             await api.delete(`/topics/${topicId}/comments/${comment.id}`);
-            if (onCommentDeleted) onCommentDeleted(comment.id);
+            if (onCommentDeleted) onCommentDeleted(comment.id, comment.parent_comment_id); // Pass parent_comment_id for potential tree update
         } catch (err) {
             console.error("Failed to delete comment:", err);
             alert(err.response?.data?.message || "Failed to delete comment.");
@@ -102,14 +102,16 @@ const CommentItem = ({ comment, topicId, onCommentDeleted, onReplySuccess }) => 
 
     const handleReplyPosted = (newReply) => {
         setShowReplyForm(false);
-        if(onReplySuccess) onReplySuccess(newReply); // This should ideally add to a list of children comments
+        if(onReplySuccess) onReplySuccess(newReply);
     }
 
     const formatDate = (dateString) => new Date(dateString).toLocaleString();
 
+    // Find child comments
+    const childComments = comment.children || [];
+
     return (
-        <div className={`ml-${comment.parent_comment_id ? 6 * (String(comment.id).length - String(comment.parent_comment_id).length) : 0} py-3 border-b border-gray-200 last:border-b-0`}>
-             {/* Simplified nesting display based on assumption of parent_comment_id depth */}
+        <div style={{ marginLeft: `${depth * 20}px` }} className="py-3 border-b border-gray-200 last:border-b-0">
             <div className="flex items-start space-x-3">
                 <img src={comment.author_avatar || `https://ui-avatars.com/api/?name=${comment.author_username}&background=random&size=40`} alt={comment.author_username} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
                 <div className="flex-1">
@@ -122,9 +124,7 @@ const CommentItem = ({ comment, topicId, onCommentDeleted, onReplySuccess }) => 
                         <button onClick={handleLikeUnlike} className={`flex items-center hover:text-blue-500 ${liked ? 'text-blue-500' : ''}`}>
                             <ThumbUpIcon className="w-4 h-4 mr-0.5"/> {likeCount}
                         </button>
-                        {!comment.parent_comment_id && ( // Allow replying only to top-level comments for simplicity now
-                            <button onClick={() => setShowReplyForm(!showReplyForm)} className="hover:text-blue-500">Reply</button>
-                        )}
+                        <button onClick={() => setShowReplyForm(!showReplyForm)} className="hover:text-blue-500">Reply</button>
                         {(user?.id === comment.user_id || user?.is_staff || user?.is_superuser) && (
                             <button onClick={handleDeleteComment} className="text-red-400 hover:text-red-600 flex items-center">
                                 <TrashIcon className="w-4 h-4 mr-0.5"/> Delete
@@ -134,9 +134,23 @@ const CommentItem = ({ comment, topicId, onCommentDeleted, onReplySuccess }) => 
                     {showReplyForm && (
                         <CommentForm topicId={topicId} parentCommentId={comment.id} onCommentPosted={handleReplyPosted} />
                     )}
-                    {/* Render child comments here if implementing deeper nesting display */}
                 </div>
             </div>
+            {childComments.length > 0 && (
+                <div className="mt-3 space-y-1">
+                    {childComments.map(child => (
+                        <CommentItem
+                            key={child.id}
+                            comment={child}
+                            topicId={topicId}
+                            allComments={allComments} // Pass down all comments for further nesting if needed by children
+                            onCommentDeleted={onCommentDeleted}
+                            onReplySuccess={onReplySuccess}
+                            depth={depth + 1}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
@@ -147,11 +161,36 @@ const SingleTopicPage = () => {
     const { id: topicId } = router.query;
     const { user, api, loading: authLoading } = useAuth();
     const [topic, setTopic] = useState(null);
-    const [comments, setComments] = useState([]);
+    const [comments, setComments] = useState([]); // This will store the flat list from API
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
+
+    // Helper function to build comment tree
+    const buildCommentTree = (commentList) => {
+        const commentMap = {};
+        // Initialize each comment with a children array
+        commentList.forEach(comment => {
+            commentMap[comment.id] = { ...comment, children: [] };
+        });
+
+        const tree = [];
+        commentList.forEach(comment => {
+            if (comment.parent_comment_id) {
+                if (commentMap[comment.parent_comment_id]) { // Ensure parent exists
+                    commentMap[comment.parent_comment_id].children.push(commentMap[comment.id]);
+                } else {
+                    // Parent doesn't exist in the current list (orphan), treat as top-level for now or log error
+                    // This can happen if parent comment was deleted or not fetched
+                    tree.push(commentMap[comment.id]);
+                }
+            } else {
+                tree.push(commentMap[comment.id]);
+            }
+        });
+        return tree;
+    };
 
     const fetchTopicAndComments = async () => {
         if (!topicId || !api) return;
@@ -162,8 +201,11 @@ const SingleTopicPage = () => {
                 api.get(`/topics/${topicId}/comments?sort_by=created_at&order=asc`) // Fetch comments sorted oldest first
             ]);
             setTopic(topicRes.data);
-            setLikeCount(topicRes.data.like_count || 0)
-            setComments(commentsRes.data.data || []);
+            setLikeCount(topicRes.data.like_count || 0);
+            // Sort comments by creation time to ensure parents are processed before children if backend doesn't guarantee order
+            const sortedComments = (commentsRes.data.data || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            setComments(sortedComments);
+
 
             if (user) { // Check like status for topic if user is logged in
                 const likeStatusRes = await api.get(`/likes/status?topic_id=${topicId}`);
@@ -183,19 +225,41 @@ const SingleTopicPage = () => {
         if (router.isReady) { // Ensure topicId is available
              fetchTopicAndComments();
         }
-    }, [topicId, api, user, router.isReady]); // Add user to deps for like status check
+    }, [topicId, api, user, router.isReady]);
 
     const handleCommentPosted = (newComment) => {
-        // If parent_comment_id is null, add to top level.
-        // Otherwise, find parent and add as child (more complex UI update)
-        // For now, just re-fetch all comments for simplicity or add to flat list
-        setComments(prevComments => [...prevComments, newComment].sort((a,b) => new Date(a.created_at) - new Date(b.created_at)));
-        // Or fetchTopicAndComments(); // Simpler, but less performant
+        // Add the new comment to the flat list, then the tree will be rebuilt.
+        // Ensure comments are sorted by date before building tree if adding incrementally
+        // or simply re-fetch all comments for robustness in complex scenarios.
+        // For now, just add to the flat list and rely on the tree re-computation.
+        setComments(prevComments => {
+            const updatedComments = [...prevComments, newComment];
+            // Re-sort to ensure parent comments generally come before children if relying on map iteration order for tree building
+            // This is a good practice even if tree building logic handles out-of-order parents.
+            return updatedComments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        });
+        // Potentially, could also optimistically update the tree structure here
+        // without re-fetching, but that's more complex.
     };
 
-    const handleCommentDeleted = (deletedCommentId) => {
-        setComments(prev => prev.filter(c => c.id !== deletedCommentId));
-        // Also need to deletion of child comments if parent is deleted (DB handles it, UI needs update)
+    const handleCommentDeleted = (deletedCommentId, parentCommentId) => {
+        // Remove the comment and its children from the flat list
+        // The tree will be rebuilt from the filtered list.
+        setComments(prevComments => {
+            const commentsToDelete = new Set([deletedCommentId]);
+            let changed = true;
+            // Cascade delete children in the flat list for tree rebuilding
+            while(changed){
+                changed = false;
+                prevComments.forEach(comment => {
+                    if(comment.parent_comment_id && commentsToDelete.has(comment.parent_comment_id) && !commentsToDelete.has(comment.id)){
+                        commentsToDelete.add(comment.id);
+                        changed = true;
+                    }
+                });
+            }
+            return prevComments.filter(c => !commentsToDelete.has(c.id));
+        });
     };
 
     const handleLikeUnlikeTopic = async () => {
@@ -299,18 +363,20 @@ const SingleTopicPage = () => {
 
             <div className="mt-8 pt-6 border-t border-gray-200">
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <ChatAlt2Icon className="w-6 h-6 mr-2 text-gray-500" /> Comments ({comments.length})
+                    <ChatAlt2Icon className="w-6 h-6 mr-2 text-gray-500" /> Comments ({comments.filter(c => !c.parent_comment_id).length} top-level)
                 </h2>
                 <CommentForm topicId={topicId} onCommentPosted={handleCommentPosted} />
                 {comments.length > 0 ? (
-                    <div className="space-y-1"> {/* Reduced space for denser comments */}
-                        {comments.map(comment => (
+                    <div className="space-y-1">
+                        {buildCommentTree(comments).map(comment => (
                             <CommentItem
                                 key={comment.id}
                                 comment={comment}
                                 topicId={topicId}
+                                allComments={comments} // Pass all comments for children lookup if CommentItem handles it
                                 onCommentDeleted={handleCommentDeleted}
-                                onReplySuccess={handleCommentPosted} // Simplified reply handling
+                                onReplySuccess={handleCommentPosted}
+                                depth={0}
                             />
                         ))}
                     </div>
