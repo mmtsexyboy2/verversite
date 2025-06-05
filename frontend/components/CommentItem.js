@@ -52,22 +52,30 @@ const CommentItem = ({ comment, topicId, allComments, onCommentDeleted, onReplyS
     const childComments = comment.children || [];
 
     return (
-        <div style={{ marginLeft: `${depth * 20}px` }} className="py-3 border-b border-gray-200 last:border-b-0">
+        <div
+            style={{ marginLeft: `${depth * 16}px` }} // Reduced multiplier from 20px to 16px
+            className={`py-3 border-b border-gray-200 last:border-b-0 ${depth > 0 ? 'border-l-2 border-gray-100 pl-3' : ''}`}
+        >
             <div className="flex items-start space-x-3">
                 <img src={comment.author_avatar || `https://ui-avatars.com/api/?name=${comment.author_username}&background=random&size=40`} alt={comment.author_username} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
                 <div className="flex-1">
                     <div className="flex items-center justify-between">
-                        <Link href={`/profile/${comment.author_username}`} legacyBehavior><a className="text-sm font-semibold text-gray-800 hover:underline">{comment.author_username}</a></Link>
-                        <p className="text-xs text-gray-500">{formatDate(comment.created_at)}</p>
+                        <Link href={`/profile/${comment.author_username}`} legacyBehavior>
+                            <a className="text-sm font-semibold text-text_default hover:underline">{comment.author_username}</a>
+                        </Link>
+                        <p className="text-xs text-text_secondary">{formatDate(comment.created_at)}</p>
                     </div>
-                    <p className="text-gray-700 mt-1 text-sm sm:text-base">{comment.body}</p>
-                    <div className="mt-2 flex items-center space-x-3 text-xs text-gray-500">
-                        <button onClick={handleLikeUnlike} className={`flex items-center hover:text-blue-500 ${liked ? 'text-blue-500' : ''}`}>
+                    <p className="text-text_default mt-1 text-sm sm:text-base leading-relaxed">{comment.body}</p> {/* Added leading-relaxed */}
+                    <div className="mt-2 flex items-center space-x-3 text-xs text-text_secondary">
+                        <button
+                            onClick={handleLikeUnlike}
+                            className={`flex items-center hover:text-primary transition-colors duration-150 ${liked ? 'text-primary' : 'text-text_secondary'}`}
+                        >
                             <ThumbUpIcon className="w-4 h-4 mr-0.5"/> {likeCount}
                         </button>
-                        <button onClick={() => setShowReplyForm(!showReplyForm)} className="hover:text-blue-500">Reply</button>
+                        <button onClick={() => setShowReplyForm(!showReplyForm)} className="hover:text-primary transition-colors duration-150">Reply</button>
                         {(user?.id === comment.user_id || user?.is_staff || user?.is_superuser) && (
-                            <button onClick={handleDeleteComment} className="text-red-400 hover:text-red-600 flex items-center">
+                            <button onClick={handleDeleteComment} className="text-error hover:opacity-80 flex items-center transition-opacity duration-150"> {/* Using semantic color */}
                                 <TrashIcon className="w-4 h-4 mr-0.5"/> Delete
                             </button>
                         )}

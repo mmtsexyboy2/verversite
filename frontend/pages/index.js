@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext'; // Assuming api is provided by useAuth
+import { useAuth } from '../contexts/AuthContext';
 import TopicCard from '../components/TopicCard';
+import TopicCardSkeleton from '../components/TopicCardSkeleton'; // Import Skeleton
 
-const ITEMS_PER_PAGE = 15; // Or whatever matches backend default/preference
+const ITEMS_PER_PAGE = 15;
 
 export default function HomePage() {
     const { api, loading: authLoading } = useAuth();
@@ -76,18 +77,28 @@ export default function HomePage() {
 
     // Render logic
     if (!topics.length && (authLoading || (loadingTopics && page === 1))) {
-        return <div className="text-center py-10">Loading feed...</div>;
+        // Show skeleton loaders for initial load
+        return (
+            <>
+                <h1 className="text-3xl font-semibold mb-8 text-center text-text_default">Topic Feed</h1>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                        <TopicCardSkeleton key={index} />
+                    ))}
+                </div>
+            </>
+        );
     }
 
     if (error && !topics.length) { // Show error prominently if initial load fails
-        return <div className="text-center py-10 text-red-500">Error: {error}</div>;
+        return <div className="text-center py-10 text-error">Error: {error}</div>; {/* Use semantic error color */}
     }
 
     return (
         <>
-            <h1 className="text-3xl font-semibold mb-8 text-center text-gray-700">Topic Feed</h1>
+            <h1 className="text-3xl font-semibold mb-8 text-center text-text_default">Topic Feed</h1> {/* Use text_default */}
             {topics.length === 0 && !loadingTopics && !error && (
-                <p className="text-center text-gray-500">No topics in your feed right now. Check back later or create one!</p>
+                <p className="text-center text-text_secondary">No topics in your feed right now. Check back later or create one!</p> {/* Use text_secondary */}
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {topics.map((topic, index) => {
@@ -102,11 +113,17 @@ export default function HomePage() {
                     }
                 })}
             </div>
-            {loadingTopics && (
-                <div className="text-center py-10">Loading more topics...</div>
+            {loadingTopics && (page > 1 || topics.length > 0) && ( // Show spinner only for subsequent loads
+                <div className="text-center py-10 flex items-center justify-center text-text_secondary">
+                    <svg className="animate-spin h-5 w-5 mr-3 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading more topics...
+                </div>
             )}
             {!loadingTopics && !hasMore && topics.length > 0 && (
-                <p className="text-center text-gray-500 py-10">You've reached the end of the feed!</p>
+                <p className="text-center text-text_secondary py-10">You've reached the end of the feed!</p> {/* Use text_secondary */}
             )}
             {/* Fallback "Load More" button if infinite scroll is problematic or as an alternative */}
             {/* {!loadingTopics && hasMore && topics.length > 0 && (
