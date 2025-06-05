@@ -2,8 +2,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
-import TopicCard from '../../components/TopicCard'; // Assuming TopicCard can be reused
-import { UserIcon, CalendarIcon, UsersIcon, CheckCircleIcon, PlusCircleIcon, NewspaperIcon } from '@heroicons/react/outline';
+import TopicCard from '../../components/TopicCard';
+import { UserIcon as UserIconOutline, CalendarIcon as CalendarIconOutline, UsersIcon as UsersIconOutline, CheckCircleIcon as CheckCircleIconOutline, PlusCircleIcon as PlusCircleIconOutline, NewspaperIcon as NewspaperIconOutline } from '@heroicons/react/outline'; // Keep old ones if used elsewhere temporarily
+import { UserIcon, CalendarIcon, UsersIcon, CheckCircleIcon, PlusCircleIcon, NewspaperIcon, CollectionIcon } from '@heroicons/react/solid'; // Import solid versions
 
 const UserProfilePage = () => {
     const router = useRouter();
@@ -65,15 +66,15 @@ const UserProfilePage = () => {
     const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     if (isLoading || authLoading && !profileUser) { // Show loading if auth is loading and we don't have profile yet
-        return <div className="text-center py-20">Loading profile...</div>;
+        return <div className="text-center py-20 text-text_secondary">Loading profile...</div>;
     }
 
     if (error && !profileUser) {
-         return <div className="text-center py-20 text-red-500">Error: {error} <Link href="/" legacyBehavior><a className="text-blue-500 hover:underline">Go Home</a></Link></div>;
+         return <div className="text-center py-20 text-error">Error: {error} <Link href="/" legacyBehavior><a className="text-primary hover:text-primary-dark hover:underline transition-colors duration-150">Go Home</a></Link></div>;
     }
 
     if (!profileUser) {
-         return <div className="text-center py-20 text-gray-500">User profile not found. <Link href="/" legacyBehavior><a className="text-blue-500 hover:underline">Go Home</a></Link></div>;
+         return <div className="text-center py-20 text-text_secondary">User profile not found. <Link href="/" legacyBehavior><a className="text-primary hover:text-primary-dark hover:underline transition-colors duration-150">Go Home</a></Link></div>;
     }
 
     const isOwnProfile = currentUser?.id === profileUser.id;
@@ -86,84 +87,90 @@ const UserProfilePage = () => {
                     <img
                         src={profileUser.avatar_url || `https://ui-avatars.com/api/?name=${profileUser.username}&size=128&background=random`}
                         alt={profileUser.username}
-                        className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-gray-200 object-cover"
+                        className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-gray-200 object-cover flex-shrink-0"
                     />
-                    <div className="mt-4 md:mt-0 md:ml-6 text-center md:text-left">
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{profileUser.full_name || profileUser.username}</h1>
-                        <p className="text-md text-gray-500">@{profileUser.username}</p>
-                        <div className="flex items-center justify-center md:justify-start text-sm text-gray-500 mt-2">
-                            <CalendarIcon className="w-4 h-4 mr-1.5"/>
-                            Joined: {formatDate(profileUser.date_joined)}
-                        </div>
-
-                        {/* Follow/Unfollow Button or Edit Profile Button */}
-                        <div className="mt-4">
-                            {isOwnProfile ? (
-                                <button className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-md text-sm transition duration-150">
-                                    Edit Profile (Not Implemented)
-                                </button>
-                            ) : currentUser && ( // Only show follow if a user is logged in
-                                <button
-                                    onClick={handleFollowToggle}
-                                    className={`font-semibold py-2 px-4 rounded-md text-sm transition duration-150
-                                        ${isFollowing
-                                            ? 'bg-red-100 hover:bg-red-200 text-red-600 border border-red-300'
-                                            : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
-                                >
-                                    {isFollowing ? (
-                                        <><CheckCircleIcon className="w-5 h-5 inline mr-1"/> Following</>
-                                    ) : (
-                                        <><PlusCircleIcon className="w-5 h-5 inline mr-1"/> Follow</>
-                                    )}
-                                </button>
-                            )}
+                    <div className="mt-4 md:mt-0 md:ml-6 flex-grow text-center md:text-left">
+                        <div className="md:flex md:items-start md:justify-between">
+                            <div>
+                                <h1 className="text-3xl md:text-4xl font-bold text-text_default">{profileUser.full_name || profileUser.username}</h1>
+                                <p className="text-md text-text_secondary mt-1">@{profileUser.username}</p>
+                                <div className="flex items-center justify-center md:justify-start text-sm text-text_secondary mt-2.5">
+                                    <CalendarIcon className="w-4 h-4 mr-1.5 text-gray-400"/> {/* Icon color kept lighter */}
+                                    <span>Joined: {formatDate(profileUser.date_joined)}</span>
+                                </div>
+                            </div>
+                            {/* Follow/Unfollow Button or Edit Profile Button */}
+                            <div className="mt-4 md:mt-1 md:ml-4 flex-shrink-0">
+                                {isOwnProfile ? (
+                                    <button className="bg-gray-200 hover:bg-gray-300 text-text_default font-semibold py-2 px-4 rounded-md text-sm transition duration-150">
+                                        Edit Profile (Not Implemented)
+                                    </button>
+                                ) : currentUser && (
+                                    <button
+                                        onClick={handleFollowToggle}
+                                        className={`font-semibold py-2 px-5 rounded-md text-sm transition duration-150 flex items-center justify-center
+                                            ${isFollowing
+                                                ? 'bg-red-100 hover:bg-red-200 text-red-600 border border-red-300' // Semantic error color for "following" state can be different
+                                                : 'bg-primary hover:bg-primary-dark text-white'}`}
+                                    >
+                                        {isFollowing ? (
+                                            <><CheckCircleIcon className="w-5 h-5 mr-1.5"/> Following</>
+                                        ) : (
+                                            <><PlusCircleIcon className="w-5 h-5 mr-1.5"/> Follow</>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Stats: Followers, Following */}
-                <div className="mt-6 pt-6 border-t border-gray-200 flex justify-center md:justify-start space-x-6">
-                    <div className="text-center">
-                        <p className="text-xl font-semibold text-gray-800">{profileUser.follower_count || 0}</p>
-                        <p className="text-sm text-gray-500">Followers</p>
+                {/* Stats: Followers, Following, Topics */}
+                <div className="mt-8 pt-6 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                    <div>
+                        <p className="text-2xl font-bold text-text_default">{profileUser.follower_count || 0}</p>
+                        <div className="flex items-center justify-center text-sm text-text_secondary mt-1">
+                            <UsersIcon className="w-4 h-4 mr-1.5 text-gray-400" /> {/* Icon color kept lighter */}
+                            <span>Followers</span>
+                        </div>
                         {/* TODO: Link to followers list page/modal */}
                     </div>
-                    <div className="text-center">
-                        <p className="text-xl font-semibold text-gray-800">{profileUser.following_count || 0}</p>
-                        <p className="text-sm text-gray-500">Following</p>
+                    <div>
+                        <p className="text-2xl font-bold text-text_default">{profileUser.following_count || 0}</p>
+                        <div className="flex items-center justify-center text-sm text-text_secondary mt-1">
+                            <UsersIcon className="w-4 h-4 mr-1.5 text-gray-400" /> {/* Icon color kept lighter */}
+                            <span>Following</span>
+                        </div>
                         {/* TODO: Link to following list page/modal */}
                     </div>
-                     <div className="text-center">
-                        <p className="text-xl font-semibold text-gray-800">{profileUser.topics?.length || 0}</p>
-                        <p className="text-sm text-gray-500">Topics</p>
+                     <div>
+                        <p className="text-2xl font-bold text-text_default">{profileUser.topics?.length || 0}</p>
+                        <div className="flex items-center justify-center text-sm text-text_secondary mt-1">
+                            <CollectionIcon className="w-4 h-4 mr-1.5 text-gray-400" /> {/* Icon color kept lighter */}
+                            <span>Topics</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* User's Topics */}
             <div className="mt-10">
-                <h2 className="text-xl md:text-2xl font-semibold text-gray-700 mb-6 flex items-center">
-                    <NewspaperIcon className="w-6 h-6 mr-2 text-gray-500"/>
+                <h2 className="text-xl md:text-2xl font-semibold text-text_default mb-6 flex items-center">
+                    <NewspaperIcon className="w-6 h-6 mr-2 text-text_secondary"/> {/* Icon color updated */}
                     Topics by {profileUser.username}
                 </h2>
                 {profileUser.topics && profileUser.topics.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {profileUser.topics.map(topic => (
-                            // The backend currently sends limited topic info for profile.
-                            // TopicCard might expect more (e.g. author_username, comment_count, like_count directly on topic object)
-                            // For now, we'll adapt or show limited info.
-                            // Let's assume TopicCard can handle a simplified topic object or we pass what we have.
                             <TopicCard key={topic.id} topic={{
                                 ...topic,
-                                author_username: profileUser.username, // Add this as backend doesn't nest it here
-                                author_avatar: profileUser.avatar_url, // Add this
-                                // comment_count and like_count are not provided by profile topic list currently
-                                // We can fetch them separately if needed, or TopicCard can show N/A
+                                author_username: profileUser.username,
+                                author_avatar: profileUser.avatar_url,
                             }} />
                         ))}
                     </div>
                 ) : (
-                    <p className="text-gray-500">This user hasn't posted any topics yet.</p>
+                    <p className="text-text_secondary">This user hasn't posted any topics yet.</p>
                 )}
             </div>
 

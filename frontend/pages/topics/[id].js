@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
-import { ArrowLeftIcon, CalendarIcon, UserCircleIcon, ChatAlt2Icon, ThumbUpIcon, TrashIcon } from '@heroicons/react/solid';
-import CommentForm from '../../components/CommentForm'; // Updated import path
-import CommentItem from '../../components/CommentItem'; // Updated import path
+import { ArrowLeftIcon, CalendarIcon, ChatAlt2Icon, ThumbUpIcon, TrashIcon, UserIcon, TagIcon } from '@heroicons/react/solid';
+import CommentForm from '../../components/CommentForm';
+import CommentItem from '../../components/CommentItem';
 
 const SingleTopicPage = () => {
     const router = useRouter();
@@ -178,44 +178,61 @@ const SingleTopicPage = () => {
     }, [topic]);
 
 
-    if (loading || authLoading) return <div className="text-center py-10">Loading topic...</div>;
-    if (error && !topic) return <div className="text-center py-10 text-red-500">Error: {error} <Link href="/" legacyBehavior><a className="text-blue-500 hover:underline">Go Home</a></Link></div>;
-    if (!topic) return <div className="text-center py-10 text-gray-500">Topic not found. <Link href="/" legacyBehavior><a className="text-blue-500 hover:underline">Go Home</a></Link></div>;
+    if (loading || authLoading) return <div className="text-center py-10 text-text_secondary">Loading topic...</div>;
+    if (error && !topic) return <div className="text-center py-10 text-error">Error: {error} <Link href="/" legacyBehavior><a className="text-primary hover:text-primary-dark hover:underline">Go Home</a></Link></div>;
+    if (!topic) return <div className="text-center py-10 text-text_secondary">Topic not found. <Link href="/" legacyBehavior><a className="text-primary hover:text-primary-dark hover:underline">Go Home</a></Link></div>;
 
 
     return (
         <div className="bg-white shadow-xl rounded-lg p-4 sm:p-6 lg:p-8">
             <Link href="/" legacyBehavior>
-                <a className="inline-flex items-center text-blue-500 hover:text-blue-700 mb-4 text-sm">
+                <a className="inline-flex items-center text-primary hover:text-primary-dark mb-4 text-sm transition-colors duration-150">
                     <ArrowLeftIcon className="w-4 h-4 mr-1" /> Back to topics
                 </a>
             </Link>
 
-            {topic.category_name && (
-                <span className="bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full text-xs font-medium mb-2 inline-block">
-                    {topic.category_name}
-                </span>
-            )}
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-3">{topic.title}</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-text_default mb-2">{topic.title}</h1>
 
-            <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 mb-4 space-x-3">
+            {/* Updated Meta Information Section */}
+            <div className="flex flex-wrap items-center text-sm text-text_secondary space-x-3 md:space-x-4 mb-4">
                 <div className="flex items-center">
-                    <UserCircleIcon className="w-5 h-5 mr-1 text-gray-400" />
-                    <Link href={`/profile/${topic.author_username}`} legacyBehavior><a className="hover:underline">{topic.author_username || 'Anonymous'}</a></Link>
+                    <UserIcon className="w-5 h-5 mr-1.5 text-gray-400" /> {/* Keeping icon color slightly lighter for subtlety */}
+                    <Link href={`/profile/${topic.author_username}`} legacyBehavior>
+                        <a className="hover:underline font-medium text-text_default">{topic.author_username || 'Anonymous'}</a>
+                    </Link>
                     {topic.author_avatar && <img src={topic.author_avatar} alt={topic.author_username} className="w-6 h-6 rounded-full ml-2" />}
                 </div>
-                <div className="flex items-center">
-                    <CalendarIcon className="w-5 h-5 mr-1 text-gray-400" />
-                    <span>{formatDate(topic.created_at)}</span>
-                </div>
+
+                {topic.created_at && (
+                    <>
+                        <span className="text-gray-400 hidden md:inline">•</span> {/* Separator color */}
+                        <div className="flex items-center">
+                            <CalendarIcon className="w-5 h-5 mr-1.5 text-gray-400" /> {/* Keeping icon color slightly lighter */}
+                            <span>{formatDate(topic.created_at)}</span>
+                        </div>
+                    </>
+                )}
+
+                {topic.category_name && (
+                    <>
+                        <span className="text-gray-400 hidden md:inline">•</span> {/* Separator color */}
+                        <div className="flex items-center">
+                            <TagIcon className="w-5 h-5 mr-1.5 text-gray-400" /> {/* Keeping icon color slightly lighter */}
+                            <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                                {/* Category styling can remain distinct or be themed with primary/secondary later */}
+                                {topic.category_name}
+                            </span>
+                        </div>
+                    </>
+                )}
             </div>
 
             {topic.image_url && (
                 <img src={topic.image_url} alt={topic.title} className="w-full max-h-[500px] object-contain rounded-md my-4 sm:my-6" />
             )}
 
-            <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none text-gray-700 mb-6" dangerouslySetInnerHTML={{ __html: topic.body.replace(/\n/g, '<br />') }}>
-                {/* Using dangerouslySetInnerHTML for simple <br />. Sanitize if allowing HTML input. */}
+            <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none text-text_default mb-6" dangerouslySetInnerHTML={{ __html: topic.body.replace(/\n/g, '<br />') }}>
+                {/* text-text_default applied to prose container; prose itself will style internal elements. Consider prose-true_gray or similar if further refinement needed. */}
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t">
@@ -223,7 +240,7 @@ const SingleTopicPage = () => {
                     onClick={handleLikeUnlikeTopic}
                     disabled={!user || authLoading}
                     className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150
-                                ${liked ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}
+                                ${liked ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-gray-300 text-text_default'}
                                 disabled:opacity-50`}
                 >
                     <ThumbUpIcon className="w-5 h-5" />
@@ -234,7 +251,7 @@ const SingleTopicPage = () => {
                      <button
                         onClick={handleDeleteTopic}
                         disabled={authLoading}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center space-x-1 disabled:opacity-50">
+                        className="bg-error hover:opacity-80 text-white px-3 py-1.5 rounded-md text-sm font-medium flex items-center space-x-1 disabled:opacity-50 transition-opacity duration-150"> {/* Using semantic color */}
                          <TrashIcon className="w-4 h-4"/> <span>Delete Topic</span>
                      </button>
                 )}
@@ -242,8 +259,8 @@ const SingleTopicPage = () => {
 
 
             <div className="mt-8 pt-6 border-t border-gray-200">
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <ChatAlt2Icon className="w-6 h-6 mr-2 text-gray-500" /> Comments ({comments.filter(c => !c.parent_comment_id).length} top-level)
+                <h2 className="text-xl sm:text-2xl font-semibold text-text_default mb-4 flex items-center">
+                    <ChatAlt2Icon className="w-6 h-6 mr-2 text-text_secondary" /> Comments ({comments.filter(c => !c.parent_comment_id).length} top-level)
                 </h2>
                 <CommentForm topicId={topicId} onCommentPosted={handleCommentPosted} />
                 {comments.length > 0 ? (
@@ -253,7 +270,7 @@ const SingleTopicPage = () => {
                                 key={comment.id}
                                 comment={comment}
                                 topicId={topicId}
-                                allComments={comments} // Pass all comments for children lookup if CommentItem handles it
+                                allComments={comments}
                                 onCommentDeleted={handleCommentDeleted}
                                 onReplySuccess={handleCommentPosted}
                                 depth={0}
@@ -261,7 +278,7 @@ const SingleTopicPage = () => {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-gray-500 text-sm">No comments yet. Be the first to comment!</p>
+                    <p className="text-text_secondary text-sm">No comments yet. Be the first to comment!</p>
                 )}
             </div>
         </div>
