@@ -93,41 +93,54 @@ export const AuthProvider = ({ children }) => {
         if (token) {
             try {
                 const decoded = jwtDecode(token);
-                const expiresIn = (decoded.exp * 1000) - Date.now() - (60 * 1000); // Refresh 1 min before expiry
+                // Calculate time until 1 minute before actual expiry
+                const expiresIn = (decoded.exp * 1000) - Date.now() - (60 * 1000); // 60 * 1000 ms = 1 minute
+
                 if (expiresIn > 0) {
+                    // Set an interval to attempt token refresh 1 minute before it expires.
+                    // This helps maintain an active session without interrupting the user.
                    intervalId = setInterval(attemptTokenRefresh, expiresIn);
                 } else {
-                   attemptTokenRefresh(); // If already expired or close to it
+                   // If token is already expired or very close to expiry, attempt refresh immediately.
+                   attemptTokenRefresh();
                 }
-            } catch (e) { console.error("Error decoding token for interval setup:", e); }
+            } catch (e) {
+                console.error("Error decoding token for interval setup:", e);
+                // Potentially, if token is malformed, attempt refresh or logout
+                attemptTokenRefresh();
+            }
         }
+        // Clear the interval when the component unmounts or dependencies change
         return () => clearInterval(intervalId);
-    }, [user, attemptTokenRefresh]);
+    }, [user, attemptTokenRefresh]); // Rerun if user state changes (e.g. after login/logout) or refresh logic updates
 
 
     const login = (token, refreshToken) => {
         localStorage.setItem('token', token);
         localStorage.setItem('refreshToken', refreshToken);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        fetchUserProfile();
+        fetchUserProfile(); // Fetch user profile with the new token
     };
 
-    const logout = useCallback(async () => { // Make logout async if calling backend
+    const logout = useCallback(async () => {
         const token = localStorage.getItem('token');
         if (token) {
             try {
-                // Inform backend to invalidate refresh token
+                // Client-side logout should also inform the backend.
+                // This call to '/users/logout' is intended to invalidate the refresh token on the server side,
+                // preventing it from being used to generate new access tokens.
                 await api.post('/users/logout');
             } catch (error) {
                 console.error("Error during backend logout call:", error);
-                // Still proceed with client-side logout
+                // Even if backend call fails, proceed with client-side cleanup.
             }
         }
+        // Clear tokens and user state from client
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         setUser(null);
         delete api.defaults.headers.common['Authorization'];
-    }, [api]);
+    }, [api, fetchUserProfile]); // fetchUserProfile might be called if logout leads to state where profile needs re-check (though typically not needed here)
 
 
     return (
