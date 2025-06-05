@@ -16,6 +16,8 @@ const SingleTopicPage = () => {
     const [error, setError] = useState('');
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
+    const [dynamicTopicStyles, setDynamicTopicStyles] = useState({});
+    const [currentBgClass, setCurrentBgClass] = useState('bg-white');
 
     /**
      * Transforms a flat list of comments (received from the API) into a nested tree structure.
@@ -166,14 +168,38 @@ const SingleTopicPage = () => {
 
     // Apply dynamic theme based on category
     useEffect(() => {
-        if (topic && topic.category_theme) {
-            // Example: document.body.style.backgroundColor = topic.category_theme.backgroundColor;
-            // This is a simplistic approach. A more robust solution would use CSS variables or styled-components themes.
-            // For now, we'll just log it, actual theme change needs more setup.
-            console.log("Category theme:", topic.category_theme);
+        if (topic && topic.category_theme && typeof topic.category_theme === 'object') {
+            const theme = topic.category_theme;
+            const newStyles = {};
+            let newBgClass = 'bg-white';
+
+            if (theme.pageBackgroundColor) {
+                newStyles.backgroundColor = theme.pageBackgroundColor;
+                newBgClass = 'bg-transparent';
+            } else {
+                newBgClass = 'bg-white';
+            }
+
+            if (theme.primaryTextColor) {
+                newStyles.color = theme.primaryTextColor;
+            }
+
+            if (theme.backgroundImageUrl) {
+                newStyles.backgroundImage = `url('${theme.backgroundImageUrl}')`;
+                newStyles.backgroundSize = 'cover';
+                newStyles.backgroundPosition = 'center';
+            }
+
+            setDynamicTopicStyles(newStyles);
+            setCurrentBgClass(newBgClass);
+        } else {
+            setDynamicTopicStyles({});
+            setCurrentBgClass('bg-white');
         }
+
         return () => {
-            // Reset theme if necessary: document.body.style.backgroundColor = '';
+            setDynamicTopicStyles({});
+            setCurrentBgClass('bg-white');
         };
     }, [topic]);
 
@@ -183,18 +209,24 @@ const SingleTopicPage = () => {
     if (!topic) return <div className="text-center py-10 text-text_secondary">Topic not found. <Link href="/" legacyBehavior><a className="text-primary hover:text-primary-dark hover:underline">Go Home</a></Link></div>;
 
 
+    // Determine text color class based on dynamic styles
+    const textColorClass = dynamicTopicStyles.color ? '' : 'text-text_default';
+
     return (
-        <div className="bg-white shadow-xl rounded-lg p-4 sm:p-6 lg:p-8">
+        <div
+            style={dynamicTopicStyles}
+            className={`${currentBgClass} ${textColorClass} shadow-xl rounded-lg p-4 sm:p-6 lg:p-8 transition-colors duration-300`}
+        >
             <Link href="/" legacyBehavior>
                 <a className="inline-flex items-center text-primary hover:text-primary-dark mb-4 text-sm transition-colors duration-150">
                     <ArrowLeftIcon className="w-4 h-4 mr-1" /> Back to topics
                 </a>
             </Link>
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-text_default mb-2">{topic.title}</h1>
+            <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 ${dynamicTopicStyles.color ? '' : 'text-text_default'}`}>{topic.title}</h1>
 
             {/* Updated Meta Information Section */}
-            <div className="flex flex-wrap items-center text-sm text-text_secondary space-x-3 md:space-x-4 mb-4">
+            <div className={`flex flex-wrap items-center text-sm space-x-3 md:space-x-4 mb-4 ${dynamicTopicStyles.color ? '' : 'text-text_secondary'}`}>
                 <div className="flex items-center">
                     <UserIcon className="w-5 h-5 mr-1.5 text-gray-400" /> {/* Keeping icon color slightly lighter for subtlety */}
                     <Link href={`/profile/${topic.author_username}`} legacyBehavior>
@@ -231,7 +263,7 @@ const SingleTopicPage = () => {
                 <img src={topic.image_url} alt={topic.title} className="w-full max-h-[500px] object-contain rounded-md my-4 sm:my-6" />
             )}
 
-            <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none text-text_default mb-6" dangerouslySetInnerHTML={{ __html: topic.body.replace(/\n/g, '<br />') }}>
+            <div className={`prose prose-sm sm:prose-base lg:prose-lg max-w-none mb-6 ${dynamicTopicStyles.color ? '' : 'text-text_default'}`} dangerouslySetInnerHTML={{ __html: topic.body.replace(/\n/g, '<br />') }}>
                 {/* text-text_default applied to prose container; prose itself will style internal elements. Consider prose-true_gray or similar if further refinement needed. */}
             </div>
 
@@ -240,7 +272,7 @@ const SingleTopicPage = () => {
                     onClick={handleLikeUnlikeTopic}
                     disabled={!user || authLoading}
                     className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150
-                                ${liked ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-gray-300 text-text_default'}
+                                ${liked ? 'bg-primary text-white' : `bg-gray-200 hover:bg-gray-300 ${dynamicTopicStyles.color ? '' : 'text-text_default'}`}
                                 disabled:opacity-50`}
                 >
                     <ThumbUpIcon className="w-5 h-5" />
@@ -259,8 +291,8 @@ const SingleTopicPage = () => {
 
 
             <div className="mt-8 pt-6 border-t border-gray-200">
-                <h2 className="text-xl sm:text-2xl font-semibold text-text_default mb-4 flex items-center">
-                    <ChatAlt2Icon className="w-6 h-6 mr-2 text-text_secondary" /> Comments ({comments.filter(c => !c.parent_comment_id).length} top-level)
+                <h2 className={`text-xl sm:text-2xl font-semibold mb-4 flex items-center ${dynamicTopicStyles.color ? '' : 'text-text_default'}`}>
+                    <ChatAlt2Icon className={`w-6 h-6 mr-2 ${dynamicTopicStyles.color ? '' : 'text-text_secondary'}`} /> Comments ({comments.filter(c => !c.parent_comment_id).length} top-level)
                 </h2>
                 <CommentForm topicId={topicId} onCommentPosted={handleCommentPosted} />
                 {comments.length > 0 ? (
@@ -278,7 +310,7 @@ const SingleTopicPage = () => {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-text_secondary text-sm">No comments yet. Be the first to comment!</p>
+                    <p className={`${dynamicTopicStyles.color ? '' : 'text-text_secondary'} text-sm`}>No comments yet. Be the first to comment!</p>
                 )}
             </div>
         </div>
