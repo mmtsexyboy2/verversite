@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Basic body styling */
+body {
+  @apply bg-gray-100 text-gray-900; /* Default light theme */
+}
+/* Add dark theme if specified later */
