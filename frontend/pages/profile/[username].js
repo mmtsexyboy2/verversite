@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
 import TopicCard from '../../components/TopicCard';
-import { UserIcon as UserIconOutline, CalendarIcon as CalendarIconOutline, UsersIcon as UsersIconOutline, CheckCircleIcon as CheckCircleIconOutline, PlusCircleIcon as PlusCircleIconOutline, NewspaperIcon as NewspaperIconOutline } from '@heroicons/react/outline'; // Keep old ones if used elsewhere temporarily
 import { UserIcon, CalendarIcon, UsersIcon, CheckCircleIcon, PlusCircleIcon, NewspaperIcon, CollectionIcon } from '@heroicons/react/solid'; // Import solid versions
 
 const UserProfilePage = () => {

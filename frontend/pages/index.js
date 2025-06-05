@@ -32,10 +32,7 @@ export default function HomePage() {
             });
 
             setHasMore(newTopics.length === ITEMS_PER_PAGE && response.data.pagination.page < response.data.pagination.total_pages);
-            // Or simply: setHasMore(newTopics.length > 0); if total_pages is an estimate
-            // For a feed that might not always fill ITEMS_PER_PAGE but still has more pages:
-            // setHasMore(response.data.pagination.page < response.data.pagination.total_pages);
-            // The backend's total_pages is an estimate, so newTopics.length === ITEMS_PER_PAGE is a decent proxy for now
+            // Relies on newTopics length as backend's total_pages can be an estimate for dynamic feeds.
         } catch (err) {
             console.error("Failed to fetch feed topics:", err);
             setError(err.message || 'Failed to load topics.');
@@ -125,17 +122,6 @@ export default function HomePage() {
             {!loadingTopics && !hasMore && topics.length > 0 && (
                 <p className="text-center text-text_secondary py-10">You've reached the end of the feed!</p> {/* Use text_secondary */}
             )}
-            {/* Fallback "Load More" button if infinite scroll is problematic or as an alternative */}
-            {/* {!loadingTopics && hasMore && topics.length > 0 && (
-                <div className="text-center py-10">
-                    <button
-                        onClick={() => setPage(prevPage => prevPage + 1)}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                        Load More
-                    </button>
-                </div>
-            )} */}
              {error && topics.length > 0 && ( // Show non-blocking error for subsequent loads
                 <div className="text-center py-5 text-red-500">Could not load more topics: {error}</div>
             )}
