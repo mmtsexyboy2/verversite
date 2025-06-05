@@ -30,12 +30,14 @@ const getFeedTopics = async ({ page = 1, limit = 20 }) => {
 
     // --- Logic for 90% (Today & Yesterday) ---
     const ninetyPercentLimit = Math.floor(limit * 0.9);
-    const todayLimit = Math.floor(ninetyPercentLimit * 0.6); // 60% of 90%
-    const yesterdayLimit = ninetyPercentLimit - todayLimit; // 30% of 90% (remaining of the 90%)
+    const todayLimit = Math.floor(ninetyPercentLimit * 0.6); // 60% of 90% total limit
+    const yesterdayLimit = ninetyPercentLimit - todayLimit; // 30% of 90% total limit (remaining of the 90%)
 
-    // Today's Topics (60% of 90%)
-    const todayPopularLimit = Math.floor(todayLimit * 0.1); // 10% of today's 60%
-    const todayOtherLimit = todayLimit - todayPopularLimit; // Remaining 50% of today's 60%
+    // Section 1: Today's Topics (target: 60% of 90% of total feed items)
+    // Sub-section: Popular topics from today (target: 10% of today's 60% share)
+    const todayPopularLimit = Math.floor(todayLimit * 0.1);
+    // Sub-section: Other (less popular, newer) topics from today (target: remaining 50% of today's 60% share)
+    const todayOtherLimit = todayLimit - todayPopularLimit;
 
     const todayPopularTopics = await fetchTopicsWithDetails(knex('topics'))
         .where('topics.created_at', '>=', todayStart)
@@ -50,10 +52,13 @@ const getFeedTopics = async ({ page = 1, limit = 20 }) => {
         .orderBy('popularity_score', 'asc') // And less popular ones
         .limit(todayOtherLimit);
 
-    // Yesterday's Topics (30% of 90%)
-    const yesterdayPopularLimit = Math.floor(yesterdayLimit * (20/30)); // 20% of yesterday's 30% (approx 0.66 of yesterdayLimit)
-    const yesterdayLessPopularLimit = Math.floor(yesterdayLimit * (5/30)); // 5% of yesterday's 30% (approx 0.16 of yesterdayLimit)
-    const yesterdayPastSuperPopularLimit = yesterdayLimit - yesterdayPopularLimit - yesterdayLessPopularLimit; // Remaining 5% (approx 0.16 of yesterdayLimit)
+    // Section 2: Yesterday's Topics (target: 30% of 90% of total feed items)
+    // Sub-section: Popular topics from yesterday (target: ~20% of yesterday's 30% share)
+    const yesterdayPopularLimit = Math.floor(yesterdayLimit * (20/30));
+    // Sub-section: Less popular topics from yesterday (target: ~5% of yesterday's 30% share)
+    const yesterdayLessPopularLimit = Math.floor(yesterdayLimit * (5/30));
+    // Sub-section: Super popular topics from before yesterday, filling remaining yesterday slots (target: ~5% of yesterday's 30% share)
+    const yesterdayPastSuperPopularLimit = yesterdayLimit - yesterdayPopularLimit - yesterdayLessPopularLimit;
 
     const yesterdayPopularTopics = await fetchTopicsWithDetails(knex('topics'))
         .where('topics.created_at', '>=', yesterdayStart)
@@ -77,9 +82,11 @@ const getFeedTopics = async ({ page = 1, limit = 20 }) => {
         .limit(yesterdayPastSuperPopularLimit);
 
 
-    // --- Logic for 10% (Historical) ---
+    // Section 3: Historical Topics (target: remaining 10% of total feed items)
     const tenPercentLimit = limit - ninetyPercentLimit;
-    const historicalLessPopularLimit = Math.floor(tenPercentLimit * 0.4); // 4% of 10% (0.4 * 0.1 = 0.04 of total)
+    // Sub-section: Less popular historical topics (target: 4% of 10% historical share)
+    const historicalLessPopularLimit = Math.floor(tenPercentLimit * 0.4);
+    // Sub-section: Other historical topics (potentially more popular or random, target: remaining 6% of 10% historical share)
     const historicalRandomOrMorePopularLimit = tenPercentLimit - historicalLessPopularLimit;
 
 
@@ -120,7 +127,11 @@ const getFeedTopics = async ({ page = 1, limit = 20 }) => {
     // For a truly paginated complex feed, we can't just count all topics in DB.
     // We're returning a "view" of the feed. The total number of items *that could possibly appear in this mixed feed view*
     // is not straightforward. For simplicity, we'll use the length of the unique pool we constructed *before* pagination.
-    // This means total_topics might change if the underlying data changes significantly.
+    // This means `total_topics` reflects the size of the currently constructed potential feed, not all topics in the database.
+    // TODO: Known limitations:
+    // 1. No "spill-over": If one category (e.g., "Today's Popular") has fewer topics than its limit,
+    //    the overall feed might have fewer items than `limit`. The deficit is not filled from other categories.
+    // 2. Limited Randomness/Personalization: The feed is rule-based. True user-specific personalization or more dynamic shuffling is not yet implemented.
     const totalTopicsInConstructedPool = uniqueTopics.length;
 
     return {
@@ -128,7 +139,7 @@ const getFeedTopics = async ({ page = 1, limit = 20 }) => {
         pagination: {
             page: parseInt(page),
             limit: parseInt(limit),
-            total_topics: totalTopicsInConstructedPool,
+            total_topics: totalTopicsInConstructedPool, // Represents the total number of items available in the current feed generation logic.
             total_pages: Math.ceil(totalTopicsInConstructedPool / limit)
         }
     };

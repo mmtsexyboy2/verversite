@@ -3,158 +3,8 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
 import { ArrowLeftIcon, CalendarIcon, UserCircleIcon, ChatAlt2Icon, ThumbUpIcon, TrashIcon } from '@heroicons/react/solid';
-
-// CommentForm component
-const CommentForm = ({ topicId, parentCommentId = null, onCommentPosted }) => {
-    const { user, api, loading: authLoading } = useAuth();
-    const [body, setBody] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState('');
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!body.trim()) {
-            setError('Comment cannot be empty.');
-            return;
-        }
-        if (!user) {
-            setError('You must be logged in to comment.');
-            return;
-        }
-        setSubmitting(true);
-        setError('');
-        try {
-            const response = await api.post(`/topics/${topicId}/comments`, {
-                body,
-                parent_comment_id: parentCommentId
-            });
-            setBody('');
-            if (onCommentPosted) onCommentPosted(response.data); // Pass new comment up
-        } catch (err) {
-            console.error("Failed to post comment:", err);
-            setError(err.response?.data?.message || 'Failed to post comment.');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    if (!user && !authLoading) return <p className="text-sm text-gray-600">Please <Link href={`/login?redirect=/topics/${topicId}`} legacyBehavior><a className="text-blue-500 hover:underline">login</a></Link> to comment.</p>;
-    if (authLoading) return <p className="text-sm">Loading comment form...</p>;
-
-    return (
-        <form onSubmit={handleSubmit} className="mt-4 mb-6 p-4 bg-gray-50 rounded-lg">
-            <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder={parentCommentId ? "Write a reply..." : "Write a comment..."}
-                rows="3"
-                className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                disabled={submitting}
-            />
-            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-            <button type="submit" disabled={submitting} className="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium disabled:opacity-60">
-                {submitting ? 'Posting...' : 'Post Comment'}
-            </button>
-        </form>
-    );
-};
-
-// CommentItem component (can be in its own file later)
-const CommentItem = ({ comment, topicId, allComments, onCommentDeleted, onReplySuccess, depth }) => {
-    const { user, api, loading: authLoading } = useAuth();
-    const [showReplyForm, setShowReplyForm] = useState(false);
-    const [liked, setLiked] = useState(false); // Placeholder for like state
-    const [likeCount, setLikeCount] = useState(comment.like_count || 0);
-
-    // Check if current user liked this comment (example)
-    useEffect(() => {
-        const checkLikeStatus = async () => {
-            if (user && api) {
-                try {
-                    const res = await api.get(`/likes/status?comment_id=${comment.id}`);
-                    setLiked(res.data.liked);
-                } catch (e) { console.error("Failed to fetch comment like status", e); }
-            }
-        };
-        checkLikeStatus();
-    }, [user, api, comment.id]);
-
-
-    const handleLikeUnlike = async () => {
-        if (!user || !api) return;
-        try {
-            await api.post('/likes', { comment_id: comment.id });
-            setLiked(!liked);
-            setLikeCount(prev => liked ? prev - 1 : prev + 1);
-        } catch (e) { console.error("Failed to like/unlike comment", e); }
-    };
-
-    const handleDeleteComment = async () => {
-        if (!api || !confirm("Are you sure you want to delete this comment?")) return;
-        try {
-            await api.delete(`/topics/${topicId}/comments/${comment.id}`);
-            if (onCommentDeleted) onCommentDeleted(comment.id, comment.parent_comment_id); // Pass parent_comment_id for potential tree update
-        } catch (err) {
-            console.error("Failed to delete comment:", err);
-            alert(err.response?.data?.message || "Failed to delete comment.");
-        }
-    };
-
-    const handleReplyPosted = (newReply) => {
-        setShowReplyForm(false);
-        if(onReplySuccess) onReplySuccess(newReply);
-    }
-
-    const formatDate = (dateString) => new Date(dateString).toLocaleString();
-
-    // Find child comments
-    const childComments = comment.children || [];
-
-    return (
-        <div style={{ marginLeft: `${depth * 20}px` }} className="py-3 border-b border-gray-200 last:border-b-0">
-            <div className="flex items-start space-x-3">
-                <img src={comment.author_avatar || `https://ui-avatars.com/api/?name=${comment.author_username}&background=random&size=40`} alt={comment.author_username} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full" />
-                <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                        <Link href={`/profile/${comment.author_username}`} legacyBehavior><a className="text-sm font-semibold text-gray-800 hover:underline">{comment.author_username}</a></Link>
-                        <p className="text-xs text-gray-500">{formatDate(comment.created_at)}</p>
-                    </div>
-                    <p className="text-gray-700 mt-1 text-sm sm:text-base">{comment.body}</p>
-                    <div className="mt-2 flex items-center space-x-3 text-xs text-gray-500">
-                        <button onClick={handleLikeUnlike} className={`flex items-center hover:text-blue-500 ${liked ? 'text-blue-500' : ''}`}>
-                            <ThumbUpIcon className="w-4 h-4 mr-0.5"/> {likeCount}
-                        </button>
-                        <button onClick={() => setShowReplyForm(!showReplyForm)} className="hover:text-blue-500">Reply</button>
-                        {(user?.id === comment.user_id || user?.is_staff || user?.is_superuser) && (
-                            <button onClick={handleDeleteComment} className="text-red-400 hover:text-red-600 flex items-center">
-                                <TrashIcon className="w-4 h-4 mr-0.5"/> Delete
-                            </button>
-                        )}
-                    </div>
-                    {showReplyForm && (
-                        <CommentForm topicId={topicId} parentCommentId={comment.id} onCommentPosted={handleReplyPosted} />
-                    )}
-                </div>
-            </div>
-            {childComments.length > 0 && (
-                <div className="mt-3 space-y-1">
-                    {childComments.map(child => (
-                        <CommentItem
-                            key={child.id}
-                            comment={child}
-                            topicId={topicId}
-                            allComments={allComments} // Pass down all comments for further nesting if needed by children
-                            onCommentDeleted={onCommentDeleted}
-                            onReplySuccess={onReplySuccess}
-                            depth={depth + 1}
-                        />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
-
+import CommentForm from '../../components/CommentForm'; // Updated import path
+import CommentItem from '../../components/CommentItem'; // Updated import path
 
 const SingleTopicPage = () => {
     const router = useRouter();
@@ -167,29 +17,50 @@ const SingleTopicPage = () => {
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
 
-    // Helper function to build comment tree
+    /**
+     * Transforms a flat list of comments (received from the API) into a nested tree structure.
+     * Each comment object in the output tree will have a `children` array property
+     * containing its direct replies.
+     *
+     * @param {Array<Object>} commentList - The flat list of comment objects.
+     *        Each comment should have an `id` and `parent_comment_id` (nullable).
+     * @returns {Array<Object>} A list of top-level comment objects, each potentially
+     *          containing a `children` array of nested comments.
+     */
     const buildCommentTree = (commentList) => {
-        const commentMap = {};
-        // Initialize each comment with a children array
+        const commentMap = {}; // Stores comments by ID for quick lookup and modification.
+
+        // First pass: Initialize each comment in the map and add a 'children' array.
+        // This ensures that every comment object, even those without children yet,
+        // has the 'children' property, simplifying later rendering.
         commentList.forEach(comment => {
             commentMap[comment.id] = { ...comment, children: [] };
         });
 
-        const tree = [];
-        commentList.forEach(comment => {
+        const tree = []; // This will hold the top-level comments (those without a parent_comment_id).
+
+        // Second pass: Populate the 'children' arrays.
+        // Iterate through the original list (now in commentMap with 'children' arrays).
+        commentList.forEach(commentPtr => { // Using commentPtr to signify it's a pointer to an item in commentMap
+            const comment = commentMap[commentPtr.id]; // Get the comment object from the map
             if (comment.parent_comment_id) {
-                if (commentMap[comment.parent_comment_id]) { // Ensure parent exists
-                    commentMap[comment.parent_comment_id].children.push(commentMap[comment.id]);
+                // If it's a child comment, find its parent in the map.
+                const parent = commentMap[comment.parent_comment_id];
+                if (parent) {
+                    // If parent exists in the map, add this comment to the parent's 'children' array.
+                    parent.children.push(comment);
                 } else {
-                    // Parent doesn't exist in the current list (orphan), treat as top-level for now or log error
-                    // This can happen if parent comment was deleted or not fetched
-                    tree.push(commentMap[comment.id]);
+                    // Orphan comment (parent_comment_id refers to a non-existent or non-fetched comment).
+                    // Treat it as a top-level comment for robustness, though this might indicate data integrity issues
+                    // or incomplete data fetching from the backend.
+                    tree.push(comment);
                 }
             } else {
-                tree.push(commentMap[comment.id]);
+                // If it's a top-level comment (no parent_comment_id), add it directly to the tree.
+                tree.push(comment);
             }
         });
-        return tree;
+        return tree; // Returns the list of top-level comments, which contain their children.
     };
 
     const fetchTopicAndComments = async () => {
@@ -228,36 +99,45 @@ const SingleTopicPage = () => {
     }, [topicId, api, user, router.isReady]);
 
     const handleCommentPosted = (newComment) => {
-        // Add the new comment to the flat list, then the tree will be rebuilt.
-        // Ensure comments are sorted by date before building tree if adding incrementally
-        // or simply re-fetch all comments for robustness in complex scenarios.
-        // For now, just add to the flat list and rely on the tree re-computation.
+        // Optimistically add the new comment to the local flat 'comments' state.
+        // The `buildCommentTree` function will then correctly place it in the
+        // displayed tree structure during the next render.
+        // Re-sorting by date ensures that if multiple comments are posted quickly,
+        // or if there's any slight delay, the chronological order is maintained
+        // before tree construction, which can be helpful for some tree building strategies.
         setComments(prevComments => {
             const updatedComments = [...prevComments, newComment];
-            // Re-sort to ensure parent comments generally come before children if relying on map iteration order for tree building
-            // This is a good practice even if tree building logic handles out-of-order parents.
             return updatedComments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         });
-        // Potentially, could also optimistically update the tree structure here
-        // without re-fetching, but that's more complex.
+        // A more complex optimistic update could involve inserting the new comment
+        // directly into the tree structure in state, but simply updating the flat list
+        // and letting `buildCommentTree` handle it is simpler and often sufficient.
     };
 
     const handleCommentDeleted = (deletedCommentId, parentCommentId) => {
-        // Remove the comment and its children from the flat list
-        // The tree will be rebuilt from the filtered list.
+        // When a comment is deleted, it and all its descendants must be removed
+        // from the local flat 'comments' state. The `buildCommentTree` function
+        // will then correctly reflect these removals in the displayed tree.
         setComments(prevComments => {
-            const commentsToDelete = new Set([deletedCommentId]);
-            let changed = true;
-            // Cascade delete children in the flat list for tree rebuilding
-            while(changed){
-                changed = false;
+            const commentsToDelete = new Set();
+            commentsToDelete.add(deletedCommentId);
+
+            // Iteratively find all descendants of the deleted comment.
+            // This loop continues as long as new descendants are being found and added.
+            let newDescendantsFoundInLastPass;
+            do {
+                newDescendantsFoundInLastPass = false;
                 prevComments.forEach(comment => {
-                    if(comment.parent_comment_id && commentsToDelete.has(comment.parent_comment_id) && !commentsToDelete.has(comment.id)){
+                    // If a comment's parent is marked for deletion, and the comment itself isn't yet,
+                    // mark it for deletion and note that we found new descendants in this pass.
+                    if (comment.parent_comment_id && commentsToDelete.has(comment.parent_comment_id) && !commentsToDelete.has(comment.id)) {
                         commentsToDelete.add(comment.id);
-                        changed = true;
+                        newDescendantsFoundInLastPass = true;
                     }
                 });
-            }
+            } while (newDescendantsFoundInLastPass);
+
+            // Return a new list excluding all comments marked for deletion.
             return prevComments.filter(c => !commentsToDelete.has(c.id));
         });
     };
