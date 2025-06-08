@@ -1,21 +1,21 @@
 #!/bin/sh
 
-# Exit immediately if a command exits with a non-zero status.
+# در صورت بروز خطا در هر دستور، فوراً خارج شو.
 set -e
 
-echo "Starting VerVerSite services (backend, frontend, db)..."
-echo "Building images if they don't exist or if Dockerfiles have changed..."
+echo "در حال راه اندازی سرویس های VerVerSite (بکند، فرانت اند، پایگاه داده)..."
+echo "در حال ساخت ایمیج ها در صورتی که وجود نداشته باشند یا Dockerfile ها تغییر کرده باشند..."
 
-# Bring up services in detached mode, building if necessary
+# راه اندازی سرویس ها در حالت جدا شده (detached)، در صورت نیاز ایمیج ها ساخته می شوند
 docker-compose up --build -d
 
 echo ""
-echo "Services are starting up in the background."
-echo "You can view logs using: docker-compose logs -f"
+echo "سرویس ها در پس زمینه در حال راه اندازی هستند."
+echo "می توانید لاگ ها را با استفاده از دستور زیر مشاهده کنید: docker-compose logs -f"
 echo ""
-echo "Once services are up:"
-echo " - Frontend will be accessible at http://localhost:3000"
-echo " - Backend API (if needed directly) at http://localhost:3001"
+echo "پس از راه اندازی سرویس ها:"
+echo " - فرانت اند در آدرس http://localhost:3000 در دسترس خواهد بود"
+echo " - ای پی آی بکند (در صورت نیاز مستقیم) در آدرس http://localhost:3001 در دسترس خواهد بود"
 echo ""
-echo "To stop all services, run: docker-compose down"
-echo "To stop and remove volumes (e.g., database data), run: docker-compose down -v"
+echo "برای متوقف کردن تمام سرویس ها، دستور زیر را اجرا کنید: docker-compose down"
+echo "برای متوقف کردن و حذف والیوم ها (مثلاً داده های پایگاه داده)، دستور زیر را اجرا کنید: docker-compose down -v"
