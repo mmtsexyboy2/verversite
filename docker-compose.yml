@@ -10,6 +10,7 @@ services:
     volumes:
       - ./backend:/usr/src/app # Mount host src folder for development
       - /usr/src/app/node_modules # Don't mount node_modules from host
+    command: sh -c 'npx knex migrate:latest && node server.js'
     environment:
       - NODE_ENV=development # Or production, depending on needs
       - DATABASE_URL=postgres://myuser:mypassword@db:5432/mydatabase
